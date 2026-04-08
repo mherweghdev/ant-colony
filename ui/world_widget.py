@@ -1,3 +1,4 @@
+import math
 import random
 from dataclasses import dataclass
 from rich.text import Text
@@ -23,7 +24,6 @@ class CosmeticAnt:
     y: float
     source_index: int       # which FoodSource this ant targets
     going_to_food: bool     # True = heading to food, False = returning
-    row_offset: int         # ±1 for sinuous path
     speed: float            # columns per tick
     slow: bool = False      # True when starving
 
@@ -93,7 +93,6 @@ class WorldWidget(Widget):
             y=float(self._nest_y - 1),
             source_index=source_idx,
             going_to_food=True,
-            row_offset=random.choice([-1, 0, 1]),
             speed=random.uniform(0.8, 1.4),
         ))
 
@@ -105,18 +104,27 @@ class WorldWidget(Widget):
                 continue  # move every 2 ticks when starving
 
             source = self._food_sources[ant.source_index]
-            target_x = float(source.x) if ant.going_to_food else float(self._nest_x)
+            if ant.going_to_food:
+                target_x = float(source.x)
+                target_y = float(source.y)
+            else:
+                target_x = float(self._nest_x)
+                target_y = float(self._nest_y - 1)
 
             dx = target_x - ant.x
-            if abs(dx) < ant.speed:
-                ant.x = target_x
-                ant.going_to_food = not ant.going_to_food
-                ant.row_offset = random.choice([-1, 0, 1])
-            else:
-                ant.x += ant.speed if dx > 0 else -ant.speed
+            dy = target_y - ant.y
+            dist = math.sqrt(dx * dx + dy * dy)
 
-            # Leave pheromone
-            px, py = int(ant.x), self._nest_y - 1 + ant.row_offset
+            if dist < ant.speed:
+                ant.x = target_x
+                ant.y = target_y
+                ant.going_to_food = not ant.going_to_food
+            elif dist > 0:
+                ant.x += ant.speed * dx / dist
+                ant.y += ant.speed * dy / dist
+
+            # Leave pheromone on real path
+            px, py = int(ant.x), int(ant.y)
             if 0 <= px < self._width and 0 <= py < self._height:
                 self._pheromones[(px, py)] = random.randint(3, 6)
 
@@ -174,7 +182,7 @@ class WorldWidget(Widget):
         # Ants
         for ant in self._ants:
             ax = int(ant.x)
-            ay = min(ground_y - 1, max(0, self._nest_y - 1 + ant.row_offset))
+            ay = int(ant.y)
             if 0 <= ay < h and 0 <= ax < w:
                 char = "a" if ant.going_to_food else "A"
                 style = "yellow" if ant.going_to_food else "bold yellow"
