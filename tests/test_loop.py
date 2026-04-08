@@ -45,3 +45,30 @@ def test_champignonniere_passive_food():
     state = GameState(food=0.0, foragers=0, upgrades={"champignonniere"})
     tick_production(state)
     assert abs(state.food - 0.5) < 0.001
+
+
+def test_pheromones_optimisees_multiplier():
+    state = GameState(food=0.0, foragers=10, upgrades={"pheromones_optimisees"})
+    tick_production(state)
+    # 10 × 0.05 × 1.4 = 0.7
+    assert abs(state.food - 0.7) < 0.001
+
+
+def test_combined_multipliers():
+    state = GameState(food=0.0, foragers=10, upgrades={"pattes_renforcees", "pheromones_optimisees"})
+    tick_production(state)
+    # 10 × 0.05 × 1.2 × 1.4 = 0.84
+    assert abs(state.food - 0.84) < 0.001
+
+
+def test_nurserie_renforcee_egg_multiplier():
+    state = GameState(eggs=0.0, food=100.0, upgrades={"nurserie_renforcee"})
+    tick_production(state)
+    # 0.01 × 2.0 = 0.02
+    assert abs(state.eggs - 0.02) < 0.001
+
+
+def test_materials_capped_at_materials_max():
+    state = GameState(materials=299.9, materials_max=300.0, workers=10)
+    tick_production(state)
+    assert state.materials == 300.0
