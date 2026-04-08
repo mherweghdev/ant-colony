@@ -128,3 +128,50 @@ def test_no_death_if_only_one_ant():
     state = GameState(food=0.0, population=1, foragers=0, workers=0, idle=1, starvation_ticks=19)
     tick_consumption(state)
     assert state.population == 1
+
+
+from unittest.mock import patch
+from game.loop import tick_aging, tick_hatching, tick
+
+
+def test_hatching_adds_idle_ant():
+    state = GameState(eggs=1.0, population=10, idle=1)
+    tick_hatching(state)
+    assert state.eggs == 0.0
+    assert state.population == 11
+    assert state.idle == 2
+
+
+def test_no_hatch_below_threshold():
+    state = GameState(eggs=0.9, population=10, idle=1)
+    tick_hatching(state)
+    assert state.population == 10
+    assert abs(state.eggs - 0.9) < 0.001
+
+
+def test_natural_death_occurs_probabilistically():
+    # With population=36000, probability per tick = 1.0 → always dies
+    state = GameState(population=36000, foragers=20000, workers=15000, idle=1000)
+    with patch("random.random", return_value=0.0):  # 0.0 < 1.0 → always triggers
+        tick_aging(state)
+    assert state.population == 35999
+
+
+def test_no_death_at_zero_population():
+    state = GameState(population=0, foragers=0, workers=0, idle=0)
+    tick_aging(state)
+    assert state.population == 0
+
+
+def test_tick_increments_ticks_counter():
+    state = GameState()
+    tick(state)
+    assert state.ticks == 1
+
+
+def test_tick_calls_all_phases():
+    state = GameState(food=100.0, foragers=5, workers=4, population=10)
+    initial_food = state.food
+    tick(state)
+    # Food changed = production ran, consumption ran
+    assert state.food != initial_food

@@ -1,3 +1,5 @@
+import random
+
 from game.state import GameState
 
 # --- Constants ---
@@ -65,3 +67,29 @@ def _kill_one_ant(state: GameState) -> None:
     elif state.workers > 0:
         state.workers -= 1
     state.population -= 1
+
+
+def tick_aging(state: GameState) -> None:
+    """Probabilistically kill one ant per tick based on lifespan."""
+    if state.population <= 0:
+        return
+    death_probability = state.population / LIFESPAN_TICKS
+    if random.random() < death_probability:
+        _kill_one_ant(state)
+
+
+def tick_hatching(state: GameState) -> None:
+    """Hatch eggs into idle ants when threshold reached."""
+    if state.eggs >= 1.0:
+        state.eggs -= 1.0
+        state.population += 1
+        state.idle += 1
+
+
+def tick(state: GameState) -> None:
+    """Run one full game tick (called every 250ms)."""
+    state.ticks += 1
+    tick_production(state)
+    tick_consumption(state)
+    tick_aging(state)
+    tick_hatching(state)
