@@ -76,7 +76,8 @@ class AntColonyApp(App):
         save_game(self.state)
 
     def action_toggle_upgrades(self) -> None:
-        pass  # implemented in Task 11
+        from ui.upgrade_overlay import UpgradeOverlay
+        self.push_screen(UpgradeOverlay(self.state))
 
     def action_add_forager(self) -> None:
         if self.state.idle > 0:
