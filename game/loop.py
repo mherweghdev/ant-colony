@@ -39,3 +39,29 @@ def _production_multiplier(state: GameState) -> float:
     if "pheromones_optimisees" in state.upgrades:
         multiplier *= 1.4
     return multiplier
+
+
+def tick_consumption(state: GameState) -> None:
+    """Decrease food by colony consumption; kill ant if starving too long."""
+    state.food = max(0.0, state.food - state.population * FOOD_PER_ANT_PER_TICK)
+
+    if state.food <= 0:
+        state.starvation_ticks += 1
+        if state.starvation_ticks >= STARVATION_DELAY_TICKS:
+            state.starvation_ticks = 0
+            _kill_one_ant(state)
+    else:
+        state.starvation_ticks = 0
+
+
+def _kill_one_ant(state: GameState) -> None:
+    """Remove one ant, prioritising idle > foragers > workers."""
+    if state.population <= 1:
+        return
+    if state.idle > 0:
+        state.idle -= 1
+    elif state.foragers > 0:
+        state.foragers -= 1
+    elif state.workers > 0:
+        state.workers -= 1
+    state.population -= 1

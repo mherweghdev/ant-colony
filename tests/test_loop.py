@@ -72,3 +72,59 @@ def test_materials_capped_at_materials_max():
     state = GameState(materials=299.9, materials_max=300.0, workers=10)
     tick_production(state)
     assert state.materials == 300.0
+
+
+from game.loop import tick_consumption
+
+
+def test_food_decreases_with_population():
+    state = GameState(food=50.0, population=10)
+    tick_consumption(state)
+    # 10 ants × 0.01 = 0.1
+    assert abs(state.food - 49.9) < 0.001
+
+
+def test_food_never_below_zero():
+    state = GameState(food=0.05, population=100)
+    tick_consumption(state)
+    assert state.food == 0.0
+
+
+def test_starvation_counter_increments_when_no_food():
+    state = GameState(food=0.0, population=5)
+    tick_consumption(state)
+    assert state.starvation_ticks == 1
+
+
+def test_starvation_counter_resets_when_fed():
+    state = GameState(food=10.0, population=5, starvation_ticks=5)
+    tick_consumption(state)
+    assert state.starvation_ticks == 0
+
+
+def test_ant_dies_after_starvation_delay():
+    # STARVATION_DELAY_TICKS = 20
+    state = GameState(food=0.0, population=5, foragers=3, workers=1, idle=1, starvation_ticks=19)
+    tick_consumption(state)
+    assert state.population == 4
+    assert state.starvation_ticks == 0
+
+
+def test_idle_ant_dies_first_during_starvation():
+    state = GameState(food=0.0, population=5, foragers=3, workers=1, idle=1, starvation_ticks=19)
+    tick_consumption(state)
+    assert state.idle == 0
+    assert state.foragers == 3
+
+
+def test_forager_dies_when_no_idle():
+    state = GameState(food=0.0, population=4, foragers=3, workers=1, idle=0, starvation_ticks=19)
+    tick_consumption(state)
+    assert state.foragers == 2
+    assert state.population == 3
+
+
+def test_no_death_if_only_one_ant():
+    state = GameState(food=0.0, population=1, foragers=0, workers=0, idle=1, starvation_ticks=19)
+    tick_consumption(state)
+    assert state.population == 1
